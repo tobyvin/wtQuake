@@ -3,21 +3,13 @@
 #NoTrayIcon
 #MaxThreadsPerHotkey 2
 
-IniRead, PATH, wtQuake.ini, WindowsTerminal, path, "C:\Users\tobyv\scoop\apps\WindowsTerminal-preview\current\WindowsTerminal.exe"
-IniRead, ARGS, wtQuake.ini, WindowsTerminal, args, "-p Quake"
-IniRead, HEIGHT_RATIO, wtQuake.ini, Window, height, 0.25
-IniRead, WIDTH_RATIO, wtQuake.ini, Window, width, 0.4425
-IniRead, AUTOHIDE, wtQuake.ini, Window, autohide, 0
-IniRead, ACTIVE_DISPLAY, wtQuake.ini, Window, active_display, 0
-IniRead, ANIMATION_SPEED, wtQuake.ini, Window, animation_speed, 5
-PROC := "WindowsTerminal.exe"
-
+Global CONFIG := GetConfig()
+SplitPath, PATH, PROC
 SendMode Input
 DetectHiddenWindows, On
 OnExit("ExitFunction")
 
 #`::ToggleApp()
-#+`::ToggleAutoHide()
 
 StartApp(app, args, procName) {
     prevPIDs := GetPIDs(procName)
@@ -51,36 +43,74 @@ ProcessExists(pid) {
     return (ErrorLevel == pid)
 }
 
-GetDisplay() {
-    global ACTIVE_DISPLAY
-    If (!ACTIVE_DISPLAY)
-        return { x: 0, y: 0, width: A_ScreenWidth, height: A_ScreenHeight }
+GetConfig() {
+    cfg := {}
+    ; IniRead, cfg["path"], wtQuake.ini, WindowsTerminal, path, "wt"
+    ; IniRead, cfg["args"], wtQuake.ini, WindowsTerminal, args, "-f"
+    ; IniRead, cfg["process"], wtQuake.ini, WindowsTerminal, process, "WindowsTerminal.exe"
+    ; IniRead, cfg["active_display"], wtQuake.ini, Window, active_display, 0
+    ; IniRead, cfg["width_ratio"], wtQuake.ini, Window, width_ratio, 0.5
+    ; IniRead, cfg["height_ratio"], wtQuake.ini, Window, height_ratio, 0.25
+    ; IniRead, cfg["autohide"], wtQuake.ini, Window, autohide, 0
+    ; IniRead, cfg["animation_speed"], wtQuake.ini, Window, animation_speed, 5
 
-    CoordMode, Mouse, Screen
-    MouseGetPos, x, y
+    ; cfg.path := path
+    ; cfg.args := args
+    ; cfg.process := process
+    ; cfg.active_display := active_display
+    ; cfg.width_ratio := width_ratio
+    ; cfg.height_ratio := height_ratio
+    ; cfg.autohide := autohide
+    ; cfg.animation_speed := animation_speed
+
+    cfg.path := "wt"
+    cfg.args := "-f"
+    cfg.process := "WindowsTerminal.exe"
+    cfg.active_display := 0
+    cfg.width_ratio := 0.5
+    cfg.height_ratio := 0.25
+    cfg.autohide := 0
+    cfg.animation_speed := 5
+    return cfg 
+}
+
+GetDisplays() {
+
+    displays[]
     SysGet, count, MonitorCount
     loop %count% {
         SysGet, screen, Monitor, %A_Index%
-        if (x >= screenLeft and x <= screenRight and y >= screenTop and y <= screenBottom) {
-            return { x: screenLeft, y: screenTop, width: screenRight - screenLeft, height: screenBottom - screenTop }
-        }
+        display := {}
+        display.width := screenRight - screenLeft 
+        display.height := screenBottom - screenTop 
+        display.x := screenLeft
+        display.y := screenTop
+        pos := {}
+        pos.width := display.width * config.width_ratio * A_ScreenDPI/96
+        pos.height := display.height * config.height_ratio * A_ScreenDPI/96
+        pos.x := (display.width - pos.width) / 2 + display.x
+        pos.y := screen.y
+
+        display.pos := pos
+        displays.Push(display) 
     }
 }
 
-GetPosition() {
-    global HEIGHT_RATIO, WIDTH_RATIO 
-    screen := GetDisplay()
-    pos := {}
-    pos.width := WIDTH_RATIO * screen.width
-    pos.height := HEIGHT_RATIO * screen.height
-    pos.x := (screen.width - pos.width) / 2 + screen.x
-    pos.y := screen.y
-    return pos
+GetDisplay(){
+    static display := GetDisplays()
+
+    If (active){
+        For index, display in displays {
+            CoordMode, Mouse, Screen
+            MouseGetPos, x, y
+            If (x <= display.x + display.width and y <= display.y + display.height)
+                return display
+        }
+    } 
+    return displays[0]
 }
 
 Activate(window) {
-    global AUTOHIDE, ANIMATION_SPEED
-    pos := GetPosition()
 
     SetWinDelay, 0
     WinShow, ahk_id %window%
@@ -88,23 +118,15 @@ Activate(window) {
     WinActivate, ahk_id %window%
     WinSet AlwaysOnTop, On, ahk_id %window% 
     WinSet, Transparent, Off, ahk_id %window% 
-    If (ANIMATION_SPEED) {
-        y := -pos.height
-        While, y < pos.y
-            WinMove, ahk_id %window%,, % pos.x, y+=ANIMATION_SPEED, pos.width, pos.height
-    }
+    y := -pos.height
+    While, y < pos.y
+        WinMove, ahk_id %window%,, % pos.x, y+=5, pos.width, pos.height
     WinMove, ahk_id %window%,, % pos.x, pos.y, pos.width, pos.height
-
-    If (AUTOHIDE) {
-        WinWaitNotActive, ahk_id %window%
-        Hide(window)
-    }
-
 }
 
 Hide(window) {
     global ANIMATION_SPEED
-    pos := GetPosition()
+    static pos := GetPosition()
     SetWinDelay, 0
     If (ANIMATION_SPEED){
         While, pos.y > -pos.height 
@@ -145,14 +167,12 @@ PID(newPID:=""){
 ToggleApp() {
     global PATH, ARGS, PROC
     static pid := ""
-    ; DetectHiddenWindows, On
     init := false
     if (!ProcessExists(pid)) {
         pid := StartApp(PATH, ARGS, PROC)
         PID(pid)
         WinWait, ahk_pid %pid%
         Sleep, 400
-        Send, ^b
         init := true
     }
     window := GetWindow(pid)
@@ -166,12 +186,6 @@ ToggleApp() {
         MsgBox, 0x10, "Bad window", % "The process " PROC " (" pid ") doesn't have any windows."
         pid := ""
     }
-}
-
-ToggleAutoHide() {
-    global AUTOHIDE
-    AUTOHIDE := !AUTOHIDE
-    IniWrite, % AUTOHIDE, wtQuake.ini, Window, autohide
 }
 
 ExitFunction() {
