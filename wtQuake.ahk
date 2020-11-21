@@ -4,7 +4,7 @@
 #MaxThreadsPerHotkey 2
 
 IniRead, PATH, wtQuake.ini, WindowsTerminal, path, "C:\Users\tobyv\scoop\apps\WindowsTerminal-preview\current\WindowsTerminal.exe"
-IniRead, ARGS, wtQuake.ini, WindowsTerminal, args, "-p Quake"
+IniRead, ARGS, wtQuake.ini, WindowsTerminal, args, "-f"
 IniRead, HEIGHT_RATIO, wtQuake.ini, Window, height, 0.25
 IniRead, WIDTH_RATIO, wtQuake.ini, Window, width, 0.4425
 IniRead, AUTOHIDE, wtQuake.ini, Window, autohide, 0
