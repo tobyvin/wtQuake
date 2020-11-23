@@ -8,12 +8,8 @@
     "activeDisplay": false,
     "autohide": false,
     "keybinds": {
-        "show": [
-            "ctrl+shift+`"
-        ],
-        "hide": [
-            "ctrl+`"
-        ],
+        "show": [],
+        "hide": [],
         "toggle": [
             "win+`"
         ]

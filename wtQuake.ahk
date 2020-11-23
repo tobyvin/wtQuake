@@ -25,6 +25,10 @@ toggleWT:
     wt.hidden := !wt.hidden
 Return
 
+reloadWT:
+    Reload
+return
+
 closeWT:
     wt.Close()
 Return
@@ -50,7 +54,8 @@ RegisterTray() {
     Menu, tray, add
     Menu, tray, add, Show, showWT 
     Menu, tray, add, Hide, hideWT 
-    Menu, tray, add, Close, closeWT 
+    Menu, tray, add, Reload, reloadWT
+    Menu, tray, add, Close, closeWT
     Menu, tray, add
     Menu, tray, add, Exit, exitWT 
     Menu, Tray, Default, WTQuake
@@ -120,11 +125,10 @@ class WTQuake
         }
 
         Init() {
-            MsgBox, 0x10, "No config file found. Generating new wtQuake.json..."
-
+            MsgBox, 0x10, "Bad config", "No config file found. Generating new wtQuake.json..."
+            keybinds = { show: [], hide: [], toggle: [ "win+``" ] }
             this.config := { path: "wt" , args: "-f", process: "WindowsTerminal.exe", heightRatio: 0
-            , widthRatio: 0.5, autohide: 0.25, activeDisplay: 0, animSpeed: 5 }
-
+            , widthRatio: 0.5, autohide: 0.25, activeDisplay: 0, animSpeed: 5, keybinds: keybinds }
             this.Write(this.config)
             return this.config
         }
