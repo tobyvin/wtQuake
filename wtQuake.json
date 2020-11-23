@@ -1,0 +1,10 @@
+{
+    "path": "C:/Users/tobyv/scoop/apps/WindowsTerminal-preview/current/WindowsTerminal.exe",
+    "args": "-f",
+    "process": "WindowsTerminal.exe",
+    "widthRatio": 0.4425,
+    "heightRatio": 0.25,
+    "autohide": 0,
+    "activeDisplay": 0,
+    "animSpeed": 5
+}
