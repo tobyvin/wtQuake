@@ -88,7 +88,9 @@ class WTQuake
             this.configPath := configPath
             this.config := this.Read(ConfigPath)
             if (ErrorLevel) {
-                this.config := this.Init()
+                MsgBox, 0x10, "Bad config", "No config file found. Exiting."
+                ExitApp, ErrorLevel
+                ; this.config := this.Init()
             }
             return this.config
 
