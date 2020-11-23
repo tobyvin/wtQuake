@@ -9,9 +9,13 @@ SendMode Input
 DetectHiddenWindows, On
 OnExit("ExitFunction")
 
-wt := new wtQuake()
+Global wt := new wtQuake()
 
 #`::wt.Toggle()
+
+ExitFunction() {
+    wt.Close()
+}
 
 class WTQuake
 {
@@ -266,7 +270,4 @@ class WTQuake
             return value
         }
     }
-}
-ExitFunction() {
-    wtQuake.Close()
 }
