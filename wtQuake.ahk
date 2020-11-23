@@ -11,11 +11,42 @@ OnExit("ExitFunction")
 
 Global wt := new wtQuake()
 
-#`::wt.Toggle()
+; Hotkeys
+registerKeybinds()
+return
+
+showWT:
+    wt.hidden := false
+return
+
+hideWT:
+    wt.hidden := true
+Return
+
+toggleWT:
+    wt.hidden := !wt.hidden
+Return
+
+; Functions
+registerKeybinds() {
+    For action, keybinds in wt.config.keybinds {
+        For keybindNum, keybind in keybinds {
+            keybind := StrReplace(StrReplace(StrReplace(StrReplace(keybind, "shift+", "+"), "alt+", "!"), "ctrl+", "^"), "win+", "#")
+            Hotkey, % keybind, % action . "WT"
+        }
+    }
+}
 
 ExitFunction() {
     wt.Close()
 }
+
+/*
+* -----------------------------------------------
+* Class: WTQuake
+* Represents WT process and window.    
+* -----------------------------------------------
+*/
 
 class WTQuake
 {
@@ -101,27 +132,27 @@ class WTQuake
         this.Launch()
         WinWait, % this.ahk_pid
         Sleep, 400
-        if (!this.window) 
-            MsgBox, 0x10, "Bad window", % "The process " this.config.process " (" this.pid ") doesn't have any windows."
 
-        this.hidden := false
+        if (!this.pid) 
+            MsgBox, 0x10, "Bad process", % "The process " this.config.process " does not exist."
+        else if (!this.id) 
+            MsgBox, 0x10, "Bad window", % "The process " this.config.process " (" this.pid ") doesn't have any windows."
     }
 
     Launch() {
         prevPIDs := this.GetPIDs()
-        Run % this.config.path . " " . this.config.args,,, runPID
-        this.pid := runPID
-        if (this.pid) {
+        Run % this.config.path . " " . this.config.args,,, pid
+        this.pid := pid
+        if (this.pid)
             return 
-        }
 
         newPIDs := this.GetPIDs()
         Sort, prevPIDs
         Sort, newPIDs
 
-        for idx, newPID in newPIDs {
-            if (newPID != prevPIDs[idx]) {
-                this.pid := newPID
+        for idx, pid in newPIDs {
+            if (pid != prevPIDs[idx]) {
+                this.pid := pid
                 return
             }
         }
@@ -135,11 +166,6 @@ class WTQuake
             pids.Push(aProc.processId)
 
         return pids
-    }
-
-    ProcessExists() {
-        Process, Exist, % this.pid
-        return (ErrorLevel == this.pid)
     }
 
     InitDisplays() {
@@ -166,19 +192,25 @@ class WTQuake
 
     Activate() {
         pos := this.position
-
+        wasHidden := this.hidden
         SetWinDelay, 0
         WinShow, % this.ahk_id
-        WinMove, % this.ahk_id,, pos.x, -pos.height, pos.width, pos.height
         WinActivate, % this.ahk_id
-        WinSet AlwaysOnTop, On, % this.ahk_id 
         WinSet, Transparent, Off, % this.ahk_id 
-        If (this.config.animSpeed){
+        WinSet AlwaysOnTop, On, % this.ahk_id 
+        WinGetPos curX, curY, curWidth, curHeight, % this.ahk_id
+        current := {x: curX, y: curY, width: curWidth, height: curHeight}
+        If (this.config.animSpeed and wasHidden){
             y := -pos.height
             While, y < pos.y
                 WinMove, % this.ahk_id,, pos.x, y+=this.config.animSpeed, pos.width, pos.height
         }
         WinMove, % this.ahk_id,, pos.x, pos.y, pos.width, pos.height
+
+        If (this.config.autohide) {
+            WinWaitNotActive, % this.ahk_id
+            this.hidden := true
+        }
     }
 
     Hide() {
@@ -197,14 +229,6 @@ class WTQuake
         WinHide, % this.ahk_id
     }
 
-    Toggle() {
-        if (!this.ProcessExists()) {
-            this.Init()
-        } else if (this.window) {
-            this.hidden := !this.hidden
-        }
-    }
-
     Close() {
         WinClose, % this.ahk_pid
         this.pid := this.id := ""
@@ -213,7 +237,7 @@ class WTQuake
     position {
         get {
             If (this.config.activeDisplay){
-                For index, display in this.displays {
+                For displayNum, display in this.displays {
                     CoordMode, Mouse, Screen
                     MouseGetPos, x, y
                     If (x <= display.x + display.width and y <= display.y + display.height)
@@ -224,15 +248,7 @@ class WTQuake
         }
     }
 
-    window {
-        get {
-            WinGet, windows, List, % this.ahk_pid
-            this.id := windows ? windows1 : 0
-            return this.id
-        }
-    }
-
-    hidden[] {
+    hidden {
         get {
             DetectHiddenWindows, Off
             isHidden := WinExist(this.ahk_id)
@@ -242,6 +258,9 @@ class WTQuake
             return true
         }
         set {
+            if (!this.pid)
+                this.Init()
+
             if (value)
                 this.Hide()
             else
@@ -251,6 +270,8 @@ class WTQuake
 
     id {
         get {
+            WinGet, windows, List, % this.ahk_pid
+            this.id := windows ? windows1 : 0
             return this._id
         }
         set {
@@ -262,7 +283,8 @@ class WTQuake
 
     pid {
         get {
-            return this._pid
+            Process, Exist, % this._pid
+            return (ErrorLevel)
         }
         set {
             this._pid := value
