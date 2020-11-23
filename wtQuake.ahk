@@ -15,32 +15,31 @@ wt := new wtQuake()
 
 class WTQuake
 {
-    static ConfigPath := wtQuake.json
+    static ConfigPath := "wtQuake.json"
 
-    __New() {
-        this.Init()
-    }
-
-    __Delete() {
-        this.Close()
-    }
+    /*
+    * -----------------------------------------------
+    * Class: Config
+    * Represents the config file as an object.    
+    * -----------------------------------------------
+    */
 
     class Config {
-        __New(ConfigPath) {
-            this.ConfigPath := ConfigPath
-            this.ConfigRead()
+        __New(configPath) {
+            this.configPath := configPath
+            this.config := this.Read(ConfigPath)
             if (ErrorLevel) {
-                this.Init()
+                this.config := this.Init()
             }
-            return this
+            return this.config
 
         }
         __Delete() {
-            this.ConfigWrite()
+            this.Write()
         }
 
         Read() {
-            ConfigFile := FileOpen(this.ConfigPath, "r")
+            ConfigFile := FileOpen(this.configPath, "r")
 
             if IsObject(ConfigFile) {
                 ConfigStr := ConfigFile.Read()
@@ -52,52 +51,61 @@ class WTQuake
             }
         }
 
-        Write(ConfigOut) {
-            ConfigFile := FileOpen(this.ConfigPath, "w")
+        Write(configOut) {
+            configFile := FileOpen(this.configPath, "w")
 
-            if IsObject(ConfigFile) {
-                ConfigStr := JSON.Dump( ConfigOut )
-                ConfigFile.Write(ConfigStr)
-                ConfigFile.Close()
+            if IsObject(configFile) {
+                configStr := JSON.Dump( configOut )
+                configFile.Write(configStr)
+                configFile.Close()
                 ErrorLevel := 0
             } else {
-                MsgBox % "Can't open " . this.ConfigPath
+                MsgBox % "Can't open " . this.configPath
                 ErrorLevel := 1
             }
         }
 
         Init() {
-            this.Config := { path: "wt" , args: "-f", process: "WindowsTerminal.exe", heightRatio: 0
+            MsgBox, 0x10, "No config file found. Generating new wtQuake.json..."
+
+            this.config := { path: "wt" , args: "-f", process: "WindowsTerminal.exe", heightRatio: 0
             , widthRatio: 0.5, autohide: 0.25, activeDisplay: 0, animSpeed: 5 }
 
-            this.Write(this.Config)
+            this.Write(this.config)
+            return this.config
         }
+    } 
 
-        __Get(aName) {
-            aValue := this.Config[aName]
-            if (aValue)
-                return this.Config[aName]
-            return this.Read()[aName]
-        }
-        __Set(aName, aValue) {
-            this.Config[aName] := aValue
-            this.ConfigWrite(this.Config)
-        }
+    /*
+    * -----------------------------------------------
+    *   end Config
+    * -----------------------------------------------
+    */
 
+    __New() {
+        this.Init()
+        this.hidden := true
+    }
+
+    __Delete() {
+        this.Close()
     }
 
     Init() {
-        this.Config := new Config(WTQuake.ConfigPath)
-        this.displays := this.CalcDisplays()
-        this.Start()
-        WinWait, this.ahk_pid
+        this.config := new WTQuake.Config(WTQuake.ConfigPath)
+        this.displays := this.InitDisplays()
+        this.Launch()
+        WinWait, % this.ahk_pid
         Sleep, 400
+        if (!this.window) 
+            MsgBox, 0x10, "Bad window", % "The process " this.config.process " (" this.pid ") doesn't have any windows."
+
         this.hidden := false
     }
 
-    Start() {
-        prevPIDs := this.GetPIDs(this.Config.procName)
-        Run % this.Config.path . " " . this.Config.args,,, runPID
+    Launch() {
+        prevPIDs := this.GetPIDs()
+        Run % this.config.path . " " . this.config.args,,, runPID
         this.pid := runPID
         if (this.pid) {
             return 
@@ -119,19 +127,19 @@ class WTQuake
         static wmi := ComObjGet("winmgmts:root\cimv2")
 
         pids := []
-        for aProc in wmi.ExecQuery("SELECT * FROM Win32_Process WHERE Name = '" this.Config.procName "'")
+        for aProc in wmi.ExecQuery("SELECT * FROM Win32_Process WHERE Name = '" this.config.process "'")
             pids.Push(aProc.processId)
 
         return pids
     }
 
-    ProcessExists(pid) {
-        Process, Exist, this.ahk_pid
-        return (ErrorLevel == pid)
+    ProcessExists() {
+        Process, Exist, % this.pid
+        return (ErrorLevel == this.pid)
     }
 
-    CalcDisplays() {
-        this.displays[]
+    InitDisplays() {
+        dispArray := []
         SysGet, count, MonitorCount
         loop %count% {
             SysGet, screen, Monitor, %A_Index%
@@ -141,43 +149,48 @@ class WTQuake
             display.x := screenLeft
             display.y := screenTop
             pos := {}
-            pos.width := display.width * this.Config.width_ratio * A_ScreenDPI/96
-            pos.height := display.height * this.Config.height_ratio * A_ScreenDPI/96
+            pos.width := display.width * this.config.widthRatio * A_ScreenDPI/96
+            pos.height := display.height * this.config.heightRatio * A_ScreenDPI/96
             pos.x := (display.width - pos.width) / 2 + display.x
-            pos.y := screen.y
+            pos.y := display.y
 
             display.pos := pos
-            this.displays.Push(display) 
+            dispArray.Push(display) 
         }
+        return dispArray
     }
 
     Activate() {
         pos := this.position
 
         SetWinDelay, 0
-        WinShow, this.ahk_id
-        WinMove, this.ahk_id,, % pos.x, -pos.height, pos.width, pos.height
-        WinActivate, this.ahk_id
-        WinSet AlwaysOnTop, On, this.ahk_id 
-        WinSet, Transparent, Off, this.ahk_id 
-        y := -pos.height
-        While, y < pos.y
-            WinMove, this.ahk_id,, % pos.x, y+=5, pos.width, pos.height
-        WinMove, this.ahk_id,, % pos.x, pos.y, pos.width, pos.height
+        WinShow, % this.ahk_id
+        WinMove, % this.ahk_id,, pos.x, -pos.height, pos.width, pos.height
+        WinActivate, % this.ahk_id
+        WinSet AlwaysOnTop, On, % this.ahk_id 
+        WinSet, Transparent, Off, % this.ahk_id 
+        If (this.config.animSpeed){
+            y := -pos.height
+            While, y < pos.y
+                WinMove, % this.ahk_id,, pos.x, y+=this.config.animSpeed, pos.width, pos.height
+        }
+        WinMove, % this.ahk_id,, pos.x, pos.y, pos.width, pos.height
     }
 
     Hide() {
         pos := this.position
 
         SetWinDelay, 0
-        If (this.Config.animSpeed){
-            While, pos.y > -pos.height 
-                WinMove, this.ahk_id,, % pos.x, pos.y-=this.Config.animSpeed, pos.width, pos.height
+        If (this.config.animSpeed){
+            y := pos.y
+            While, y > -pos.height 
+                WinMove, % this.ahk_id,, pos.x, y-=this.config.animSpeed, pos.width, pos.height
         }
-        WinSet AlwaysOnTop, Off, this.ahk_id 
-        WinSet, Transparent, 0, this.ahk_id 
-        WinMinimize, this.ahk_id
-        WinHide, this.ahk_id
+        WinMove, % this.ahk_id,, pos.x, -pos.height, pos.width, pos.height
+        WinSet AlwaysOnTop, Off, % this.ahk_id 
+        WinSet, Transparent, 0, % this.ahk_id 
+        WinMinimize, % this.ahk_id
+        WinHide, % this.ahk_id
     }
 
     Toggle() {
@@ -195,7 +208,7 @@ class WTQuake
 
     position {
         get {
-            If (this.Config.activeDisplay){
+            If (this.config.activeDisplay){
                 For index, display in this.displays {
                     CoordMode, Mouse, Screen
                     MouseGetPos, x, y
@@ -203,13 +216,13 @@ class WTQuake
                         return display.pos
                 }
             } 
-            return displays[0].pos
+            return this.displays[1].pos
         }
     }
 
     window {
         get {
-            WinGet, windows, List, this.ahk_pid
+            WinGet, windows, List, % this.ahk_pid
             this.id := windows ? windows1 : 0
             return this.id
         }
@@ -232,15 +245,25 @@ class WTQuake
         }
     }
 
-    ahk_id[] {
+    id {
         get {
-            return "ahk_id " . this.id
+            return this._id
+        }
+        set {
+            this._id := value
+            this.ahk_id := "ahk_id" . value
+            return value
         }
     }
 
-    ahk_pid [] {
+    pid {
         get {
-            return "ahk_pid " . this.pid
+            return this._pid
+        }
+        set {
+            this._pid := value
+            this.ahk_pid := "ahk_pid" . value
+            return value
         }
     }
 }
