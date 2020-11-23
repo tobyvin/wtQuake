@@ -1,18 +1,16 @@
 #NoEnv
 #Warn
 #SingleInstance, Force
-#NoTrayIcon
 #MaxThreadsPerHotkey 2
 #Include <JSON>
 
 SendMode Input
 DetectHiddenWindows, On
 OnExit("ExitFunction")
+RegisterTray()
 
 Global wt := new wtQuake()
-
-; Hotkeys
-registerKeybinds()
+RegisterKeybinds()
 return
 
 showWT:
@@ -27,14 +25,35 @@ toggleWT:
     wt.hidden := !wt.hidden
 Return
 
+closeWT:
+    wt.Close()
+Return
+
+exitWT:
+ExitApp
+Return
+
 ; Functions
-registerKeybinds() {
+RegisterKeybinds() {
     For action, keybinds in wt.config.keybinds {
         For keybindNum, keybind in keybinds {
             keybind := StrReplace(StrReplace(StrReplace(StrReplace(keybind, "shift+", "+"), "alt+", "!"), "ctrl+", "^"), "win+", "#")
             Hotkey, % keybind, % action . "WT"
         }
     }
+}
+
+RegisterTray() {
+    Menu, Tray, Icon, wtQuake.exe 
+    Menu, tray, NoStandard
+    Menu, tray, add, WTQuake, toggleWT
+    Menu, tray, add
+    Menu, tray, add, Show, showWT 
+    Menu, tray, add, Hide, hideWT 
+    Menu, tray, add, Close, closeWT 
+    Menu, tray, add
+    Menu, tray, add, Exit, exitWT 
+    Menu, Tray, Default, WTQuake
 }
 
 ExitFunction() {
@@ -231,7 +250,6 @@ class WTQuake
 
     Close() {
         WinClose, % this.ahk_pid
-        this.pid := this.id := ""
     }
 
     position {
