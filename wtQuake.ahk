@@ -1,8 +1,7 @@
 #NoEnv
-#Warn
 #SingleInstance, Force
 #MaxThreadsPerHotkey 2
-#Include <JSON>
+#Include <Jxon>
 
 SendMode Input
 DetectHiddenWindows, On
@@ -84,56 +83,50 @@ class WTQuake
     */
 
     class Config {
+        class _Config {
+            static base := {}
+            static path := "wt" 
+            static args := "-f"
+            static process := "WindowsTerminal.exe"
+            static widthRatio := 0.4425
+            static heightRatio := 0.25
+            static animSpeed := 5
+            static activeDisplay := false
+            static autohide := false
+            static keybinds := { show: [], hide: [], toggle: ["win+``"]}
+        }
+
         __New(configPath) {
             this.configPath := configPath
-            this.config := this.Read(ConfigPath)
-            if (ErrorLevel) {
-                MsgBox, 0x10, "Bad config", "No config file found. Exiting."
-                ExitApp, ErrorLevel
-                ; this.config := this.Init()
-            }
+            this.config := new this._Config
+            this.Read()
             return this.config
-
-        }
-        __Delete() {
-            this.Write()
         }
 
         Read() {
             ConfigFile := FileOpen(this.configPath, "r")
 
             if IsObject(ConfigFile) {
-                ConfigStr := ConfigFile.Read()
+                configStr := ConfigFile.Read()
+                this.config := Jxon_Load(configStr, this._Config)
                 ConfigFile.Close()
-                ErrorLevel := 0
-                return JSON.Load( ConfigStr )
             } else { 
-                ErrorLevel := 1
+                MsgBox, 0x10, "No config found", "No config file found. Generating new config file..."
+                this.Write()
             }
         }
 
-        Write(configOut) {
+        Write() {
             configFile := FileOpen(this.configPath, "w")
 
             if IsObject(configFile) {
-                configStr := JSON.Dump( configOut )
+                configStr := Jxon_Dump(this.config)
                 configFile.Write(configStr)
                 configFile.Close()
-                ErrorLevel := 0
             } else {
-                MsgBox % "Can't open " . this.configPath
-                ErrorLevel := 1
+                MsgBox, 0x10, "Bad config", "Failed to generate new config at" . this.configPath . "."
             }
-        }
-
-        Init() {
-            MsgBox, 0x10, "Bad config", "No config file found. Generating new wtQuake.json..."
-            keybinds = { show: [], hide: [], toggle: [ "win+``" ] }
-            this.config := { path: "wt" , args: "-f", process: "WindowsTerminal.exe", heightRatio: 0
-            , widthRatio: 0.5, autohide: 0.25, activeDisplay: 0, animSpeed: 5, keybinds: keybinds }
-            this.Write(this.config)
-            return this.config
-        }
+        } 
     } 
 
     /*
