@@ -197,8 +197,8 @@ class WTQuake
             display.x := screenLeft
             display.y := screenTop
             pos := {}
-            pos.width := display.width * this.config.widthRatio * A_ScreenDPI/96
-            pos.height := display.height * this.config.heightRatio * A_ScreenDPI/96
+            pos.width := display.width * this.config.widthRatio
+            pos.height := display.height * this.config.heightRatio
             pos.x := (display.width - pos.width) / 2 + display.x
             pos.y := display.y
 
@@ -219,9 +219,10 @@ class WTQuake
         WinGetPos curX, curY, curWidth, curHeight, % this.ahk_id
         current := {x: curX, y: curY, width: curWidth, height: curHeight}
         If (this.config.animSpeed and wasHidden){
+            stepSize := this.config.animSpeed * pos.height
             y := -pos.height
             While, y < pos.y
-                WinMove, % this.ahk_id,, pos.x, y+=this.config.animSpeed, pos.width, pos.height
+                WinMove, % this.ahk_id,, pos.x, y+=stepSize, pos.width, pos.height
         }
         WinMove, % this.ahk_id,, pos.x, pos.y, pos.width, pos.height
 
@@ -236,9 +237,10 @@ class WTQuake
 
         SetWinDelay, 0
         If (this.config.animSpeed){
+            stepSize := this.config.animSpeed * pos.height
             y := pos.y
             While, y > -pos.height 
-                WinMove, % this.ahk_id,, pos.x, y-=this.config.animSpeed, pos.width, pos.height
+                WinMove, % this.ahk_id,, pos.x, y-=stepSize, pos.width, pos.height
         }
         WinMove, % this.ahk_id,, pos.x, -pos.height, pos.width, pos.height
         WinSet AlwaysOnTop, Off, % this.ahk_id 
