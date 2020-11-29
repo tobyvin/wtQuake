@@ -2,7 +2,7 @@
     "path": "C:/Users/tobyv/scoop/apps/WindowsTerminal-preview/current/WindowsTerminal.exe",
     "args": "-f",
     "process": "WindowsTerminal.exe",
-    "widthRatio": 0.4425,
+    "widthRatio": 0.5,
     "heightRatio": 0.25,
     "animSpeed": 0.025,
     "activeDisplay": false,

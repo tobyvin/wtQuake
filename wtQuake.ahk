@@ -136,18 +136,10 @@ class WTQuake
     */
 
     __New() {
-        this.Init()
-        this.hidden := true
-    }
-
-    __Delete() {
-        this.Close()
-    }
-
-    Init() {
         this.config := new WTQuake.Config(WTQuake.ConfigPath)
         this.displays := this.InitDisplays()
-        this.Launch()
+        this.pid := this.Launch()
+
         WinWait, % this.ahk_pid
         Sleep, 400
 
@@ -155,23 +147,37 @@ class WTQuake
             MsgBox, 0x10, "Bad process", % "The process " this.config.process " does not exist."
         else if (!this.id) 
             MsgBox, 0x10, "Bad window", % "The process " this.config.process " (" this.pid ") doesn't have any windows."
+        else
+            this.hidden := true
+    }
+
+    __Delete() {
+        this.Close()
     }
 
     Launch() {
         prevPIDs := this.GetPIDs()
         Run % this.config.path . " " . this.config.args,,, pid
-        this.pid := pid
-        if (this.pid)
-            return 
+        if (pid)
+            return pid
 
+        this.config := new WTQuake.Config(WTQuake.ConfigPath)
+        this.displays := this.InitDisplays()
+        this.pid := this.Launch()
+        WinWait, % this.ahk_pid
+        Sleep, 400
+
+        if (!this.pid) 
+            MsgBox, 0x10, "Bad process", % "The process " this.config.process " does not exist."
+        else if (!this.id) 
+            MsgBox, 0x10, "Bad window", % "The process " this.config.process " (" this.pid ") doesn't have any windows."
         newPIDs := this.GetPIDs()
         Sort, prevPIDs
         Sort, newPIDs
 
         for idx, pid in newPIDs {
             if (pid != prevPIDs[idx]) {
-                this.pid := pid
-                return
+                return pid
             }
         }
     }
@@ -278,7 +284,7 @@ class WTQuake
         }
         set {
             if (!this.pid)
-                this.Init()
+                this.__New()
 
             if (value)
                 this.Hide()
