@@ -2,6 +2,7 @@
 #SingleInstance, Force
 #MaxThreadsPerHotkey 2
 #Include <Jxon>
+SetWorkingDir %A_ScriptDir%
 
 SendMode Input
 DetectHiddenWindows, On
